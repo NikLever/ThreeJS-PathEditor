@@ -1,0 +1,20 @@
+{
+  "name": "threejs-patheditor",
+  "version": "1.0.0",
+  "description": "A ThreeJS Path Editor",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite", 
+    "build": "vite build", 
+    "preview": "vite preview" 
+  },
+  "keywords": [
+    "threejs"
+  ],
+  "author": "Nik Lever",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.168.0",
+    "vite": "^5.4.3"
+  }
+}
