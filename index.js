@@ -14,6 +14,12 @@ class App{
             show: () => {
                 console.log( 'Show' );
             },
+            save: () => {
+                console.log( 'Save' );
+            },
+            load: () => {
+                console.log( 'Load' );
+            },
             tool: 'select', depth: 0.5
          };
 
@@ -25,6 +31,9 @@ class App{
         gui.add( this.config, 'depth', 0.02, 20).name('extrude depth');
         gui.add( this.config, 'snap' );
         gui.add( this.config, 'tool', ['select', 'moveTo', 'lineTo']);
+        gui.add( this.config, 'save');
+        gui.add( this.config, 'load');
+        gui.add( this.config, 'show');
         gui.add( this.config, 'export');
 
         window.addEventListener( 'resize', this.resize.bind(this) );

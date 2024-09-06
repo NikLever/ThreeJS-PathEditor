@@ -4,9 +4,9 @@
   "description": "A ThreeJS Path Editor",
   "main": "index.js",
   "scripts": {
-    "dev": "vite", 
-    "build": "vite build", 
-    "preview": "vite preview" 
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "keywords": [
     "threejs"
@@ -14,6 +14,7 @@
   "author": "Nik Lever",
   "license": "ISC",
   "dependencies": {
+    "file-saver": "^2.0.5",
     "three": "^0.168.0",
     "vite": "^5.4.3"
   }
