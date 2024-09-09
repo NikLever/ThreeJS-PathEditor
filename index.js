@@ -1,4 +1,6 @@
 import GUI from "three/examples/jsm/libs/lil-gui.module.min.js";
+import { Store } from "./store.js";
+import { Menu } from "./menu.js";
 
 class App{
     constructor(){
@@ -11,15 +13,16 @@ class App{
             export: () => {
                 console.log( 'Export' );
             }, 
+            newPath: () => {
+                console.log( 'New' );
+                if ( confirm('Are you sure you want to clear the path?')){
+                    this.newPath();
+                }
+            },
             show: () => {
                 console.log( 'Show' );
             },
-            save: () => {
-                console.log( 'Save' );
-            },
-            load: () => {
-                console.log( 'Load' );
-            },
+            name: 'Path1',
             tool: 'select', depth: 0.5
          };
 
@@ -31,8 +34,8 @@ class App{
         gui.add( this.config, 'depth', 0.02, 20).name('extrude depth');
         gui.add( this.config, 'snap' );
         gui.add( this.config, 'tool', ['select', 'moveTo', 'lineTo']);
-        gui.add( this.config, 'save');
-        gui.add( this.config, 'load');
+        gui.add( this.config, 'name');
+        gui.add( this.config, 'newPath').name('New');
         gui.add( this.config, 'show');
         gui.add( this.config, 'export');
 
@@ -41,18 +44,22 @@ class App{
         this.nodes = [];
         this.activeNode = null;
 
+        this.store = new Store();
+
         canvas.addEventListener('pointerdown', ( evt ) => { 
             this.pointerDown = true;
             const pt = this.convertScreenToPath( evt.x, evt.y );
             this.activeNode = this.selectNode( pt.x, pt.y );
             if ( this.activeNode == null){
-                switch( this.config.tool ){
+                this.addNode( this.config.tool, evt.x, evt.y );
+                /*switch( this.config.tool ){
                     case 'moveTo':
                         this.addNode( 'moveTo', evt.x, evt.y );
                         break;
                     case 'lineTo':
+                        this.addNode( 'lineTo', evt.x, evt.y );
                         break;
-                }
+                }*/
             }
             this.render();
         }, false);
@@ -72,7 +79,34 @@ class App{
             //this.render();
         });
 
+        const menu = new Menu();
+
         this.resize();
+    }
+
+    newPath(){
+        this.config.yAxis = 0.1;
+        this.config.xAxis = 0.1;
+        this.config.xMax = 5;
+        this.config.scale = 50;
+        this.config.snap = true;
+        this.config.name = 'Path2';
+        this.config.tool = 'select';
+        this.config.depth = 0.5;
+        
+        this.activeNode = null;
+        this.nodes = [];
+
+        this.render();
+    }
+
+    savePath(){
+        const data = {
+            config: this.config,
+            nodes: this.nodes
+        }
+
+        localStorage.setItem( this.config.name, JSON.stringify( data ));
     }
 
     selectNode( x, y ){
@@ -278,11 +312,23 @@ class App{
                 this.context.beginPath();
                 this.context.arc( pt.x, pt.y, 10, 0, Math.PI*2 );
                 this.context.fill();
-                if ( this.activeNode == node ){
-                    this.context.stroke();
-                }
+                if ( this.activeNode == node ) this.context.stroke();
+                break;
+            case 'lineTo':
+                this.context.fillStyle = "#88f";
+                this.context.strokeStyle = "#000";
+                this.context.lineWidth = 1;
+                this.context.beginPath();
+                this.context.moveTo( this.prevPt.x, this.prevPt.y );
+                this.context.lineTo( pt.x, pt.y );
+                this.context.stroke();
+                this.context.beginPath();
+                this.context.arc( pt.x, pt.y, 10, 0, Math.PI*2 );
+                this.context.fill();
+                if ( this.activeNode == node ) this.context.stroke();
                 break;
         }
+        this.prevPt = pt;
     }
 
     render(){

@@ -5,10 +5,26 @@
                 margin: 0;
                 padding: 0;
             }
+
+            .context-menu {
+                display: none;
+                position: absolute;
+                z-index: 10;
+            }
         </style>
+        <script src="https://cdn.tailwindcss.com"></script>
     </header>
     <body>
-
+        <!-- Context Menu -->
+        <div class="context-menu">
+            <div id="menu-cmds" class="bg-white w-60 border border-gray-300 rounded-lg flex flex-col text-sm py-4 px-2 text-gray-500 shadow-lg">
+                <div class="flex hover:bg-gray-100 py-1 px-2 rounded cursor-pointer">
+                    <div class="ml-4">Delete</div>
+                </div>
+                <hr class="my-3 border-gray-300" />
+            </div>
+        </div>
+        <!-- Context Menu -->
     </body>
     <script type="module" src="index.js"></script>
 </html>
