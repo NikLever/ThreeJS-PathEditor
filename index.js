@@ -1,6 +1,7 @@
 import GUI from "three/examples/jsm/libs/lil-gui.module.min.js";
 import { Store } from "./store.js";
 import { Menu } from "./menu.js";
+import { Geometry } from "./geometry.js";
 
 class App{
     constructor(){
@@ -46,7 +47,21 @@ class App{
 
         this.store = new Store();
 
+        const activePath = this.store.read( 'activePath' );
+        if (activePath){
+            const data = this.store.read( activePath );
+            if (data){
+                this.nodes = data.nodes;
+                for (const [key, value] of Object.entries(data.config)) {
+                    this.config[key] = value;
+                }
+            } 
+            this.render();
+            gui.controllersRecursive().forEach( controller => controller.updateDisplay() );
+        }
+
         canvas.addEventListener('pointerdown', ( evt ) => { 
+            if ( evt.button == 2 ) return;
             this.pointerDown = true;
             const pt = this.convertScreenToPath( evt.x, evt.y );
             this.activeNode = this.selectNode( pt.x, pt.y );
@@ -79,9 +94,39 @@ class App{
             //this.render();
         });
 
-        const menu = new Menu();
+        const menu = new Menu( this, [ 
+            { name: 'Delete', code: 'deleteNode()'},
+            { name: 'Insert', code: 'insertNode()'},
+            { name: 'Change', code: 'changeNode()'}
+        ]);
 
         this.resize();
+    }
+
+    deleteNode(){
+        if (this.activeNode){
+            const index = this.nodes.indexOf( this.activeNode );
+            if (index!=-1){
+                this.nodes.splice( index, 1 );
+                this.activeNode = null;
+            }
+            this.render();
+        }
+    }
+
+    insertNode( ){
+        
+    }
+
+    changeNode(){
+        if (this.activeNode){
+            const index = this.nodes.indexOf( this.activeNode );
+            if (index!=-1){
+                const node = this.nodes[index];
+                node.tool = this.config.tool;
+                this.render();
+            }
+        }
     }
 
     newPath(){
@@ -336,6 +381,8 @@ class App{
 
         this.drawBg();
         this.nodes.forEach( node => this.drawNode( node ) );
+
+        this.store.write( this.config, this.nodes );
     }
 }
 

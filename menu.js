@@ -1,8 +1,10 @@
 export class Menu{
-    constructor( links ){
+    constructor( app, links ){
         this.menu = document.querySelector(".context-menu");
         this.menuState = 0;
         this.contextMenuActive = "block";
+        this.app = app;
+
         this.addLinks( links );
 
         document.addEventListener("contextmenu", (e) => {
@@ -12,7 +14,7 @@ export class Menu{
 
         // Event Listener for Close Context Menu when outside of menu clicked
         document.addEventListener("click", (e) => {
-            if (e.button === 0) this.hide();
+            this.hide();
         });
         
         // Close Context Menu on Esc key press
@@ -21,8 +23,21 @@ export class Menu{
         }
     }
 
-    addLinks( links ){
+    addLinks( links = [] ){
+      let html = "";
 
+      /*<div class="flex hover:bg-gray-100 py-1 px-2 rounded cursor-pointer">
+                    <button class="ml-4" onclick="alert('Delete');">Delete</button>
+      </div>*/
+
+      const prefix = '<div class="flex hover:bg-gray-100 py-1 px-2 rounded cursor-pointer"><button class="ml-4" onclick="';
+
+      links.forEach( link => {
+        html = `${html + prefix}window.app.${link.code};">${link.name}</button></div>`;
+      });
+
+      const elm = document.getElementById("menu-links");
+      elm.innerHTML = html;
     }
 
     show(e) {
@@ -44,7 +59,7 @@ export class Menu{
         let posx = 0;
         let posy = 0;
       
-        if (!e) e = window.event;
+        //if (!e) e = window.event;
       
         if (e.pageX || e.pageY) {
           posx = e.pageX;
@@ -57,11 +72,10 @@ export class Menu{
           posy =
             e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
         }
+
+        this.position = { x: posx, y: posy };
       
-        return {
-          x: posx,
-          y: posy
-        };
+        return this.position;
       }
 
       positionMenu(e) {
