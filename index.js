@@ -94,7 +94,7 @@ class App{
             //this.render();
         });
 
-        const menu = new Menu( this, [ 
+        this.menu = new Menu( this, [ 
             { name: 'Delete', code: 'deleteNode()'},
             { name: 'Insert', code: 'insertNode()'},
             { name: 'Change', code: 'changeNode()'}
@@ -104,6 +104,7 @@ class App{
     }
 
     deleteNode(){
+        //Called by context menu
         if (this.activeNode){
             const index = this.nodes.indexOf( this.activeNode );
             if (index!=-1){
@@ -115,10 +116,31 @@ class App{
     }
 
     insertNode( ){
-        
+        //Called by context menu
+        const pt = this.menu.position;
+        const prevPt = {};
+        let found = false;
+
+        this.nodes.forEach( node => {
+            if ( !found ){
+                const pt1 = this.convertPathToScreen( node.x, node.y );
+
+                if ( node.tool == 'lineTo' && prevPt.x != undefined ){    
+                    if ( Geometry.calcIsInsideThickLineSegment( prevPt, pt1, pt, 10 ) ){
+                        const index = this.nodes.indexOf( node );
+                        this.addNode( this.config.tool, pt.x, pt.y, index );
+                        found = true;
+                    }
+                }
+
+                prevPt.x = pt1.x;
+                prevPt.y = pt1.y;
+            }
+        })
     }
 
     changeNode(){
+        //Called by context menu
         if (this.activeNode){
             const index = this.nodes.indexOf( this.activeNode );
             if (index!=-1){
@@ -168,10 +190,15 @@ class App{
         return activeNode;
     }
 
-    addNode( tool, x, y ){
+    addNode( tool, x, y, insertIndex = -1 ){
         const pt = this.convertScreenToPath( x, y );
-        this.nodes.push( { tool, x: pt.x, y: pt.y } );
-        this.activeNode = this.nodes[ this.nodes.length-1 ];
+        const node = { tool, x: pt.x, y: pt.y };
+        this.activeNode = node;
+        if (insertIndex != -1){
+            this.nodes.splice( insertIndex, 0, node );
+        }else{
+            this.nodes.push( node );
+        }
         this.render();
     }
 
