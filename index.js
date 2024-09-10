@@ -1,7 +1,9 @@
 import GUI from "three/examples/jsm/libs/lil-gui.module.min.js";
+import * as THREE from "three";
 import { Store } from "./store.js";
 import { Menu } from "./menu.js";
 import { Geometry } from "./geometry.js";
+import { Preview } from "./preview.js";
 
 class App{
     constructor(){
@@ -13,6 +15,7 @@ class App{
         this.config = { yAxis: 0.1, xAxis: 0.1, xMax: 5, scale: 50, snap: true,
             export: () => {
                 console.log( 'Export' );
+                this.export();
             }, 
             newPath: () => {
                 console.log( 'New' );
@@ -21,7 +24,9 @@ class App{
                 }
             },
             show: () => {
-                console.log( 'Show' );
+                //console.log( 'Show' );
+                this.preview.show( this.nodes );
+                this.previewOn = true;
             },
             name: 'Path1',
             tool: 'select', depth: 0.5
@@ -61,6 +66,10 @@ class App{
         }
 
         canvas.addEventListener('pointerdown', ( evt ) => { 
+            if ( this.preview.on ){
+                this.preview.hide();
+                return;
+            }
             if ( evt.button == 2 ) return;
             this.pointerDown = true;
             const pt = this.convertScreenToPath( evt.x, evt.y );
@@ -100,7 +109,27 @@ class App{
             { name: 'Change', code: 'changeNode()'}
         ]);
 
+        this.preview = new Preview();
+
         this.resize();
+    }
+
+    export(){
+        let str = "const shape = new THREE.Shape();\n";
+        this.nodes.forEach( node => {
+            switch( node.tool ){
+                case "moveTo":
+                    str = `${str}shape.moveTo( ${node.x}, ${node.y });\n`;
+                    break;
+                case "lineTo":
+                    str = `${str}shape.lineTo( ${node.x}, ${node.y });\n`;
+                    break;
+            }
+        })
+
+        navigator.clipboard.writeText(str);
+        
+        alert( "Code copied to the clipboard" );
     }
 
     deleteNode(){
