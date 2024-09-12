@@ -47,4 +47,12 @@ export class Geometry{
             return (Math.sqrt(( (line2.x - pnt.x) * (line2.x - pnt.x) ) + ( (line2.y - pnt.y) * (line2.y - pnt.y) )) <= lineThickness);
         }
     }
+
+    static calcLineMidPoint( a, b ){
+        const pt = {};
+        pt.x = (a.x - b.x)/2 + a.x;
+        pt.y = (a.y - b.y)/2 + a.y;
+
+        return pt;
+    }
 }

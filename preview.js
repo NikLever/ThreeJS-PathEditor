@@ -86,10 +86,13 @@ export class Preview{
         nodes.forEach( node => {
             switch( node.tool ){
                 case 'moveTo':
-                    shape.moveTo( node.x, node.y );
+                    shape.moveTo( node.x, -node.y );
                     break;
                 case 'lineTo':
-                    shape.lineTo( node.x, node.y );
+                    shape.lineTo( node.x, -node.y );
+                    break;
+                case 'quadraticCurveTo':
+                    shape.quadraticCurveTo( node.options.ctrlA.x, -node.options.ctrlA.y, node.x, -node.y );
                     break;
             }
         });

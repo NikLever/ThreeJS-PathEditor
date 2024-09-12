@@ -24,8 +24,40 @@ export class Store{
         return data ? data[key] : undefined;
     }
 
+    delete( key ){
+        const serializedData = localStorage.getItem( Store.namespace );
+        const data = JSON.parse(serializedData);
+        delete data[key];
+        localStorage.setItem(Store.namespace, JSON.stringify(data));
+    }
+
+    getPathNames(){
+        const serializedData = localStorage.getItem( Store.namespace );
+        const data = JSON.parse(serializedData);
+        const names = [];
+        for (const [key, value] of Object.entries(data)) {
+            if (key != 'activePath') names.push( key );
+        }
+        return names;
+    }
+
+    get nextPathName(){
+        const names = this.getPathNames();
+        if (names.length == 0 ) return "Path1";
+        const lastName = names.pop();
+        const lastIndex = Number(lastName.substring(4));
+        return `Path${lastIndex + 1}`;
+    }
+
     get activePath(){
         const key = this.read( 'activePath' );
         return this.read( key );
+    }
+
+    set activePath( value ){
+        const serializedData = localStorage.getItem( Store.namespace );
+        const data = serializedData ? JSON.parse(serializedData) : {};
+        data['activePath'] = value;
+        localStorage.setItem(Store.namespace, JSON.stringify(data));
     }
 }

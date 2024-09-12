@@ -12,11 +12,18 @@ class App{
         this.canvas = canvas;
         this.context = canvas.getContext( '2d' );
 
+        this.store = new Store();
+
+        const activePath = this.store.read( 'activePath' );
+
         this.config = { yAxis: 0.1, xAxis: 0.1, xMax: 5, scale: 50, snap: true,
             export: () => {
                 console.log( 'Export' );
                 this.export();
             }, 
+            delete: () => {
+                this.deletePath();
+            },
             newPath: () => {
                 console.log( 'New' );
                 if ( confirm('Are you sure you want to clear the path?')){
@@ -28,9 +35,15 @@ class App{
                 this.preview.show( this.nodes );
                 this.previewOn = true;
             },
-            name: 'Path1',
+            name: activePath,
             tool: 'select', depth: 0.5
          };
+
+        const pathNames = this.store.getPathNames();
+
+        if (activePath == undefined ){
+            this.config.name = "Path1";
+        }
 
         const gui = new GUI();
         gui.add( this.config, 'xAxis', 0, 1).onChange( value => this.render() );
@@ -39,31 +52,22 @@ class App{
         gui.add( this.config, 'scale', 0, 100).name('scale (%)');
         gui.add( this.config, 'depth', 0.02, 20).name('extrude depth');
         gui.add( this.config, 'snap' );
-        gui.add( this.config, 'tool', ['select', 'moveTo', 'lineTo']);
-        gui.add( this.config, 'name');
-        gui.add( this.config, 'newPath').name('New');
+        gui.add( this.config, 'tool', ['select', 'move', 'moveTo', 'lineTo', 'absarc', 'absellipse', 'quadraticCurveTo', 'bezierCurveTo']);
+        this.nameCtrl = gui.add( this.config, 'name' ).options( pathNames ).onChange( ( value ) => {
+            this.loadPath( value );
+        });
+        gui.add( this.config, 'newPath').name('new');
+        gui.add( this.config, 'delete');
         gui.add( this.config, 'show');
         gui.add( this.config, 'export');
+        this.gui = gui;
 
         window.addEventListener( 'resize', this.resize.bind(this) );
 
         this.nodes = [];
         this.activeNode = null;
 
-        this.store = new Store();
-
-        const activePath = this.store.read( 'activePath' );
-        if (activePath){
-            const data = this.store.read( activePath );
-            if (data){
-                this.nodes = data.nodes;
-                for (const [key, value] of Object.entries(data.config)) {
-                    this.config[key] = value;
-                }
-            } 
-            this.render();
-            gui.controllersRecursive().forEach( controller => controller.updateDisplay() );
-        }
+        if (activePath) this.loadPath( activePath );
 
         canvas.addEventListener('pointerdown', ( evt ) => { 
             if ( this.preview.on ){
@@ -114,21 +118,51 @@ class App{
         this.resize();
     }
 
+    loadPath( name ){
+        const data = this.store.read( name );
+        if (data){
+            this.nodes = data.nodes;
+            for (const [key, value] of Object.entries(data.config)) {
+                this.config[key] = value;
+            }
+            this.activePath = name;
+            this.store.activePath = name;
+        } 
+        this.render();
+        this.gui.controllersRecursive().forEach( controller => controller.updateDisplay() );
+    }
+
+    deletePath(){
+        if ( this.activePath == null ) return;
+
+        this.store.delete( this.activePath );
+        const names = this.store.getPathNames();
+        this.nameCtrl = this.nameCtrl.options( names );
+        this.nameCtrl.onChange( ( value ) => {
+            this.loadPath( value );
+        });
+
+        if ( names.length > 0) this.loadPath( names[0] );
+    }
+
     export(){
         let str = "const shape = new THREE.Shape();\n";
         this.nodes.forEach( node => {
             switch( node.tool ){
                 case "moveTo":
-                    str = `${str}shape.moveTo( ${node.x}, ${node.y });\n`;
+                    str = `${str}shape.moveTo( ${node.x}, ${-node.y });\n`;
                     break;
                 case "lineTo":
-                    str = `${str}shape.lineTo( ${node.x}, ${node.y });\n`;
+                    str = `${str}shape.lineTo( ${node.x}, ${-node.y });\n`;
+                    break;
+                case "quadraticCurveTo":
+                    str = `${str}shape.quadraticCurveTo( ${node.options.ctrlA.x}, ${-node.options.ctrlA.y}, ${node.x}, ${-node.y });\n`;
                     break;
             }
         })
 
         navigator.clipboard.writeText(str);
-        
+
         alert( "Code copied to the clipboard" );
     }
 
@@ -174,24 +208,56 @@ class App{
             const index = this.nodes.indexOf( this.activeNode );
             if (index!=-1){
                 const node = this.nodes[index];
-                node.tool = this.config.tool;
+                if (node.tool == this.config.tool) return;
+                if (index == 0){
+                    //Only moveTo allowed
+                    if (this.config.tool != 'moveTo'){
+                        alert("You can only change the first node to 'moveTo'");
+                        return;
+                    }
+                    node.tool = this.config.tool;
+                    delete node.options;
+                }else{
+                    const prevNode = this.nodes[index-1];
+                    node.tool = this.config.tool;
+                    delete node.options;
+                    switch( node.tool ){
+                        case 'quadraticCurveTo':
+                            const ctrlA = Geometry.calcLineMidPoint( prevNode, node );
+                            node.options = { ctrlA };
+                            break;
+                    }
+                }
                 this.render();
             }
         }
     }
 
     newPath(){
+        const names = this.store.getPathNames();
+        const name = this.store.nextPathName;
+        names.push( name );
+
+        this.nameCtrl = this.nameCtrl.options( names );
+        this.nameCtrl.onChange( ( value ) => {
+            this.loadPath( value );
+        });
+        
         this.config.yAxis = 0.1;
         this.config.xAxis = 0.1;
         this.config.xMax = 5;
         this.config.scale = 50;
         this.config.snap = true;
-        this.config.name = 'Path2';
+        this.config.name = name;
         this.config.tool = 'select';
         this.config.depth = 0.5;
         
+        this.nameCtrl.updateDisplay();
+
         this.activeNode = null;
         this.nodes = [];
+
+        this.activePath = name;
 
         this.render();
     }
@@ -220,13 +286,20 @@ class App{
     }
 
     addNode( tool, x, y, insertIndex = -1 ){
-        const pt = this.convertScreenToPath( x, y );
+        let pt = this.convertScreenToPath( x, y );
         const node = { tool, x: pt.x, y: pt.y };
         this.activeNode = node;
         if (insertIndex != -1){
             this.nodes.splice( insertIndex, 0, node );
         }else{
             this.nodes.push( node );
+        }
+        const prevNode = ( insertIndex == -1 ) ? this.nodes[ this.nodes.length - 2 ] : this.nodes[ insertIndex - 1 ];
+        switch ( tool ){
+            case 'quadraticCurveTo':
+                pt = Geometry.calcLineMidPoint( prevNode, node );
+                node.options = { ctrlA: pt };
+                break;
         }
         this.render();
     }
@@ -422,6 +495,20 @@ class App{
                 this.context.beginPath();
                 this.context.moveTo( this.prevPt.x, this.prevPt.y );
                 this.context.lineTo( pt.x, pt.y );
+                this.context.stroke();
+                this.context.beginPath();
+                this.context.arc( pt.x, pt.y, 10, 0, Math.PI*2 );
+                this.context.fill();
+                if ( this.activeNode == node ) this.context.stroke();
+                break;
+            case 'quadraticCurveTo':
+                this.context.fillStyle = "#88f";
+                this.context.strokeStyle = "#000";
+                this.context.lineWidth = 1;
+                this.context.beginPath();
+                this.context.moveTo( this.prevPt.x, this.prevPt.y );
+                
+                this.context.quadraticCurveTo( pt.x, pt.y );
                 this.context.stroke();
                 this.context.beginPath();
                 this.context.arc( pt.x, pt.y, 10, 0, Math.PI*2 );
