@@ -32,9 +32,10 @@ export class Store{
     }
 
     getPathNames(){
-        const serializedData = localStorage.getItem( Store.namespace );
-        const data = JSON.parse(serializedData);
         const names = [];
+        const serializedData = localStorage.getItem( Store.namespace );
+        if (serializedData==null) return ['Path1'];
+        const data = JSON.parse(serializedData);
         for (const [key, value] of Object.entries(data)) {
             if (key != 'activePath') names.push( key );
         }
