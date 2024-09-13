@@ -29,7 +29,7 @@ export class Preview{
         this.container.appendChild( this.renderer.domElement );
         this.controls = new OrbitControls( this.camera, this.renderer.domElement ); 
         this.controls.addEventListener( "change", this.render.bind(this) );
-        this.material = new MeshStandardMaterial( { color: 0x3333BB, wireframe: true } );
+        this.material = new MeshStandardMaterial( { color: 0x3333BB } );//, wireframe: true } );
         this.on = false;
     }
 
@@ -54,6 +54,7 @@ export class Preview{
         this.container.style.top = `${top}px`;
 
         this.controls.target = this.getCenterPoint( this.mesh );
+        this.camera.position.set( this.controls.target.x, this.controls.target.y, this.getCameraOffset( this.mesh ) );
         this.controls.update();
 
         this.render();
@@ -64,6 +65,27 @@ export class Preview{
     hide(){
         this.container.style.top = "-600px";
         this.on = false;
+    }
+
+    getCameraOffset(mesh) {
+        const geometry = mesh.geometry;
+    
+        geometry.computeBoundingBox();
+    
+        const theta = 20 * (Math.PI/180.0);
+        const halfwidth = (geometry.boundingBox.max.x - geometry.boundingBox.min.x)/2;
+        //y = sin(t) * sc => sc = y/sin(t)
+        let scale = halfwidth / Math.sin( theta );
+        //x = cos(t) * sc =>  
+        let posZ = (Math.cos( theta ) * scale) * 1.5;
+
+        const halfheight = (geometry.boundingBox.max.y - geometry.boundingBox.min.y)/2;
+        //y = sin(t) * sc => sc = y/sin(t)
+        scale = halfheight / Math.sin( theta );
+        //x = cos(t) * sc =>  
+        posZ = Math.max( posZ, (Math.cos( theta ) * scale) * 1.5 );
+        
+        return posZ;
     }
 
     getCenterPoint(mesh) {
@@ -99,7 +121,7 @@ export class Preview{
                     shape.bezierCurveTo( node.options.ctrlA.x, -node.options.ctrlA.y, node.options.ctrlB.x, -node.options.ctrlB.y, node.x, -node.y );
                     break;
                 case 'arc':
-                    shape.absarc( node.x, -node.y, node.options.radius, -node.options.start, -node.options.end, true );
+                    shape.absarc( node.x, -node.y, node.options.radius, -node.options.start, -node.options.end, !node.options.clockwise );
                     const pt = Geometry.calcPointOnCircle( node.x, node.y, node.options.radius, node.options.end );
                     shape.moveTo( pt.x, -pt.y );
                     break;

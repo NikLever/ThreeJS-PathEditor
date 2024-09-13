@@ -34,6 +34,9 @@ class App{
                 this.preview.show( this.nodes, this.config.depth );
                 this.previewOn = true;
             },
+            readme: () => {
+                window.location = 'https://github.com/NikLever/ThreeJS-PathEditor';
+            },
             name: activePath,
             tool: 'select', depth: 0.5
          };
@@ -58,6 +61,7 @@ class App{
         gui.add( this.config, 'delete');
         gui.add( this.config, 'show');
         gui.add( this.config, 'export');
+        gui.add( this.config, 'readme');
         this.nameCtrl = gui.add( this.config, 'name' ).options( pathNames ).onChange( ( value ) => {
             this.loadPath( value );
         });
@@ -83,6 +87,11 @@ class App{
             if ( this.activeNode == null){
                 this.activeCtrl = this.selectCtrl( pt.x, pt.y );
                 if (this.activeCtrl == null) this.addNode( this.config.tool, evt.x, evt.y );
+                if (this.activeCtrl.type == 'clockwise'){
+                    //Just flip the direction
+                    this.activeCtrl.node.options.clockwise = !this.activeCtrl.node.options.clockwise;
+                    this.activeCtrl = null;
+                }
             }
             this.render();
         }, false);
@@ -194,7 +203,7 @@ class App{
                     str = `${str}shape.bezierCurveTo( ${node.options.ctrlA.x * unitScalar}, ${-node.options.ctrlA.y * unitScalar}, ${node.options.ctrlB.x * unitScalar}, ${-node.options.ctrlB.y * unitScalar}, ${node.x}, ${-node.y });\n`;
                     break;
                 case 'arc':
-                    str = `${str}shape.absarc( ${node.x * unitScalar}, ${-node.y * unitScalar}, ${node.options.radius* unitScalar}, ${-node.options.start}, ${-node.options.end}, true );\n`;
+                    str = `${str}shape.absarc( ${node.x * unitScalar}, ${-node.y * unitScalar}, ${node.options.radius* unitScalar}, ${-node.options.start}, ${-node.options.end}, ${(node.options.clockwise) ? 'true' : 'false'} );\n`;
                     const pt = Geometry.calcPointOnCircle( node.x, node.y, node.options.radius, node.options.end );
                     str = `${str}shape.moveTo( ${pt.x* unitScalar}, ${-pt.y * unitScalar} );\n`;
                     break;
@@ -274,7 +283,7 @@ class App{
                             break;
                         case 'arc':
                             const radius = Geometry.distanceBetweenPoints( prevNode, node );
-                            node.options = { radius, start: 0, end: Math.PI/2 };
+                            node.options = { radius, start: 0, end: Math.PI/2, clockwise: false };
                             break;
                     }
                 }
@@ -354,7 +363,7 @@ class App{
         const xOrg = this.canvas.width * this.config.yAxis;
         const scale = (this.canvas.width * 0.95 - xOrg)/ this.config.xMax;
         const tolerance = (7.0/scale) * (7.0/scale);
-        const ctrls = [ 'ctrlA', 'ctrlB', 'radius', 'start', 'end' ];
+        const ctrls = [ 'ctrlA', 'ctrlB', 'radius', 'start', 'end', 'clockwise' ];
         this.nodes.forEach( node => {
             if (node.options){
                 if ( activeCtrl == null){
@@ -380,6 +389,9 @@ class App{
                                     ctrl = Geometry.calcPointOnCircle( node.x, node.y, node.options.radius, node.options.end );
                                     ctrl.type = 'end';
                                     ctrl.node = node;
+                                    break;
+                                case 'clockwise':
+                                    ctrl = { x: node.x, y: node.y + 20/scale, node, type: ctrlName };
                                     break;
                             }
                             if ( ctrl){
@@ -421,7 +433,7 @@ class App{
                 break;
             case 'arc':
                 const radius = ( prevNode ) ? Geometry.calcDistanceBetweenTwoPoints( prevNode, node ) : 0.5;
-                node.options = { radius, start: 0, end: Math.PI*2 };
+                node.options = { radius, start: 0, end: Math.PI*2, clockwise: false };
                 break;
         }
 
@@ -616,6 +628,22 @@ class App{
         if ( stroke ) this.context.stroke();
     }
 
+    drawArrow( x, y, radius, fill, left ){
+        this.context.fillStyle = fill;
+        let pt;
+        let theta = (left) ? Math.PI : 0;
+        const inc = Math.PI / 1.5;
+        this.context.beginPath();
+        pt = Geometry.calcPointOnCircle( x, y, radius, theta );
+        this.context.moveTo( pt.x, pt.y );
+        for( let i=0; i<3; i++){
+            theta += inc;
+            pt = Geometry.calcPointOnCircle( x, y, radius, theta );
+            this.context.lineTo( pt.x, pt.y );
+        }
+        this.context.fill();
+    }
+
     drawNode( node ){
         const pt = this.convertPathToScreen( node.x, node.y );
         let ptA, ptB;
@@ -688,18 +716,21 @@ class App{
                 this.context.lineWidth = 1;
                 const radius = this.scalePathValueToScreen( node.options.radius );
                 this.context.beginPath();
-                this.context.arc( pt.x, pt.y, radius, node.options.start, node.options.end );
+                this.context.arc( pt.x, pt.y, radius, node.options.start, node.options.end, node.options.clockwise );
                 this.context.stroke();
                 this.drawCircle( pt.x, pt.y, 8, "#88f", active );
                 ptA = Geometry.calcPointOnCircle( pt.x, pt.y, radius, Math.PI );
                 active = this.isValueCtrlActive( 'radius' );
-                this.drawCircle( ptA.x, ptA.y, 8, "#8f8", active );
+                this.drawCircle( ptA.x, ptA.y, 8, "#ea0", active );
                 ptA = Geometry.calcPointOnCircle( pt.x, pt.y, radius, node.options.start );
                 active = this.isValueCtrlActive( 'start' );
-                this.drawCircle( ptA.x, ptA.y, 8, "#f88", active );
+                this.drawCircle( ptA.x, ptA.y, 8, "#8f8", active );
                 ptA = Geometry.calcPointOnCircle( pt.x, pt.y, radius, node.options.end);
                 active = this.isValueCtrlActive( 'end' );
                 this.drawCircle( ptA.x, ptA.y, 8, "#f88", active );
+                pt.y += 20;
+                if (node.options.clockwise==null) node.options.clockwise = false;
+                this.drawArrow( pt.x, pt.y, 8, "#aaa", node.options.clockwise );
                 pt.x = ptA.x;
                 pt.y = ptA.y;
                 break;
