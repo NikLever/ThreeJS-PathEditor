@@ -41,6 +41,19 @@ export class Store{
         return names;
     }
 
+    copy(){
+        let name = this.read( 'activePath' );
+        if (name){
+            const path = this.read( name );
+            if (path){
+                name = this.nextPathName;
+                path.config.name = name;
+                this.write( path.config, path.nodes );
+                return name;
+            }
+        }
+    }
+
     get nextPathName(){
         const names = this.getPathNames();
         if (names.length == 0 ) return "Path1";

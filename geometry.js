@@ -50,9 +50,35 @@ export class Geometry{
 
     static calcLineMidPoint( a, b ){
         const pt = {};
-        pt.x = (a.x - b.x)/2 + a.x;
-        pt.y = (a.y - b.y)/2 + a.y;
+        pt.x = (a.x - b.x)/2 + b.x;
+        pt.y = (a.y - b.y)/2 + b.y;
 
         return pt;
+    }
+
+    static calcPointAlongLine( a, b, delta ){
+        const pt = {};
+        pt.x = (a.x - b.x)* delta + b.x;
+        pt.y = (a.y - b.y) * delta + b.y;
+
+        return pt;
+    }
+
+    static calcDistanceBetweenTwoPoints( a, b ){
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        return Math.sqrt( dx*dx + dy*dy );
+    }
+
+    static calcPointOnCircle( cx, cy, radius, theta ){
+        const x = Math.cos( theta ) * radius + cx;
+        const y = Math.sin( theta ) * radius + cy;
+        return { x, y };
+    }
+
+    static calcAngleFromXAxis( org, pt ){
+        const x = pt.x - org.x;
+        const y = pt.y - org.y;
+        return ( x>0 ) ? Math.atan( y/x ) : Math.atan( y/x ) - Math.PI;
     }
 }

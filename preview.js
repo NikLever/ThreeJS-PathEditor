@@ -10,6 +10,7 @@ import { ExtrudeGeometry,
          Vector3,
          WebGLRenderer } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { Geometry } from "./geometry";
 
 export class Preview{
     constructor(){
@@ -28,7 +29,7 @@ export class Preview{
         this.container.appendChild( this.renderer.domElement );
         this.controls = new OrbitControls( this.camera, this.renderer.domElement ); 
         this.controls.addEventListener( "change", this.render.bind(this) );
-        this.material = new MeshStandardMaterial( { color: 0x3333BB } );
+        this.material = new MeshStandardMaterial( { color: 0x3333BB, wireframe: true } );
         this.on = false;
     }
 
@@ -93,6 +94,14 @@ export class Preview{
                     break;
                 case 'quadraticCurveTo':
                     shape.quadraticCurveTo( node.options.ctrlA.x, -node.options.ctrlA.y, node.x, -node.y );
+                    break;
+                case 'bezierCurveTo':
+                    shape.bezierCurveTo( node.options.ctrlA.x, -node.options.ctrlA.y, node.options.ctrlB.x, -node.options.ctrlB.y, node.x, -node.y );
+                    break;
+                case 'arc':
+                    shape.absarc( node.x, -node.y, node.options.radius, -node.options.start, -node.options.end, true );
+                    const pt = Geometry.calcPointOnCircle( node.x, node.y, node.options.radius, node.options.end );
+                    shape.moveTo( pt.x, -pt.y );
                     break;
             }
         });

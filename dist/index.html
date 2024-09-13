@@ -11,10 +11,21 @@
                 position: absolute;
                 z-index: 10;
             }
+
+            #preview {
+                position: absolute;
+                top: -500;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 512px;
+                height: 512px;
+                z-index: 11;
+                transition: top 1s;
+            }
         </style>
         <script src="https://cdn.tailwindcss.com"></script>
     </header>
-    <script type="module" crossorigin src="./assets/index-BO8mFMS4.js"></script>
+    <script type="module" crossorigin src="./assets/index-DFawlrA0.js"></script>
 
     <body>
         <!-- Context Menu -->
@@ -27,5 +38,6 @@
             </div>
         </div>
         <!-- Context Menu -->
+         <div id="preview"></div>
     </body>
 </html>
