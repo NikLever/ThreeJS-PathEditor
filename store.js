@@ -2,7 +2,16 @@ export class Store{
     static namespace = "THREEJS-PATH-EDITOR";
 
     constructor(){
+        this.udoArr = [];
+    }
 
+    udo(){
+        const data = this.udoArr.pop();
+        if (data){
+            localStorage.setItem(Store.namespace, JSON.stringify(data));
+            return true;
+        }
+        return false;
     }
 
     write( config, nodes ) {
@@ -12,6 +21,8 @@ export class Store{
         for (const [key, value] of Object.entries(config)) {
             if (typeof value != "function" ) config1[key] = value;
         }
+        this.udoArr.push( data );
+        if (this.udoArr.length>6) this.udoArr.shift();
         const path = { config: config1, nodes };
         data[config.name] = path;
         data['activePath'] = config.name;
