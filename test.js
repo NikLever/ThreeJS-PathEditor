@@ -1,15 +1,15 @@
 const shape = new THREE.Shape();
-shape.moveTo( -0.00043346161587605594, -1.0029294795993018);
-shape.lineTo( 0.9987372943189253, -0.7442858908879075);
-shape.lineTo( 0.9708408006224141, -0.2529674006866681);
-shape.lineTo( 0.4800439521732232, 0.0939924046541693);
-shape.lineTo( 0.23276308162601766, 0.4421996141846881);
-shape.lineTo( 0.39909876030098834, 0.8165569515461643);
-shape.lineTo( 0.015102390564701381, 1.0037583003030783);
-shape.lineTo( -0.3564879775032997, 0.7907697049340233);
-shape.lineTo( -0.15524766159342582, 0.4458511064490282);
-shape.lineTo( -0.4165901793697671, 0.14075872172913378);
-shape.lineTo( -1.0161833532353521, -0.24042531856132604);
-shape.lineTo( -0.9369164870001431, -0.7579166166696988);
-shape.lineTo( -0.0015447853485013032, -1.0091665005477088);
-
+shape.moveTo( 0.000 , -0.500);
+shape.lineTo( 0.400, -0.500);
+shape.quadraticCurveTo( 0.994, -0.497, 1.000, 0.100;
+shape.quadraticCurveTo( 1.004, 0.600, 0.400, 0.600;
+shape.lineTo( 0.400, 1.000);
+shape.lineTo( -0.400, 1.000);
+shape.lineTo( -0.400, 0.600);
+shape.quadraticCurveTo( -1.000, 0.599, -1.000, 0.100;
+shape.quadraticCurveTo( -1.002, -0.498, -0.400, -0.500;
+shape.lineTo( 0.000, -0.500);
+const path1 = new THREE.Path()
+path1.absarc( -0.002, 0.068, 0.328, 0, -6.283, false );
+path1.moveTo( 0.326, 0.068 );
+shape.holes.push(path1);

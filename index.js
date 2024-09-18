@@ -14,9 +14,10 @@ class App{
 
         this.store = new Store();
 
-        const activePath = this.store.read( 'activePath' );
+        let activePath = this.store.read( 'activePath' );
+        if (activePath==null) activePath = "Path1";
 
-        this.config = { yAxis: 0.1, xAxis: 0.1, xMax: 5, units: 'm', scale: 50, snap: true,
+        this.config = { yAxis: 0.5, xAxis: 0.5, xMax: 2, units: 'm', snap: true,
             export: () => {
                 this.export();
             }, 
@@ -31,7 +32,11 @@ class App{
             },
             show: () => {
                 //console.log( 'Show' );
-                this.preview.show( this.nodes, this.config.depth );
+                if (this.config.holes){
+                    this.preview.show( this.nodes, this.config.depth, this.ghosts.paths );
+                }else{
+                    this.preview.show( this.nodes, this.config.depth );
+                }
                 this.previewOn = true;
             },
             udo: () => {
@@ -43,24 +48,24 @@ class App{
                 window.location = 'https://github.com/NikLever/ThreeJS-PathEditor';
             },
             name: activePath,
-            tool: 'select', depth: 0.5
+            tool: 'select', depth: 0.2,
+            snap: false,
+            holes: false
         };
 
         this.graph = new Graph( canvas, this.config );
 
         const pathNames = this.store.getPathNames();
 
-        if (activePath == undefined ){
-            this.config.name = "Path1";
-        }
-
         const gui = new GUI();
-        gui.add( this.config, 'xAxis', 0, 1).onChange( value => this.render() );
-        gui.add( this.config, 'yAxis', 0, 1).onChange( value => this.render() );
-        gui.add( this.config, 'xMax', 0.5, 10, 1).onChange( value => this.render() );
+        const config = gui.addFolder( 'Settings' );
+        config.add( this.config, 'xAxis', 0, 1).onChange( value => this.render() );
+        config.add( this.config, 'yAxis', 0, 1).onChange( value => this.render() );
+        config.add( this.config, 'xMax', 0.5, 10, 1).onChange( value => this.render() );
         //gui.add( this.config, 'scale', 0, 100).name('scale (%)');
-        gui.add( this.config, 'units', [ 'm', 'cm', 'mm' ] );
-        gui.add( this.config, 'depth', 0.02, 2 ).name('extrude depth');
+        config.add( this.config, 'units', [ 'm', 'cm', 'mm' ] );
+        config.add( this.config, 'depth', 0.02, 2 ).name('extrude depth');
+        config.add( this.config, 'snap');
        // gui.add( this.config, 'snap' );
         gui.add( this.config, 'tool', ['select', 'moveTo', 'lineTo', 'quadraticCurveTo', 'bezierCurveTo', 'arc']);
         gui.add( this.config, 'newPath').name('new');
@@ -73,7 +78,16 @@ class App{
         this.nameCtrl = gui.add( this.config, 'name' ).options( pathNames ).onChange( ( value ) => {
             this.loadPath( value );
         });
+        const backdrop = gui.addFolder( 'Backdrop' );
+        backdrop.add( this.config, 'holes' ).name('Use ghosts as holes');
+        backdrop.close();
+
+        const ghosts = backdrop.addFolder( 'Ghosts' );
+
+        this.ghosts = { folder: ghosts, paths: {}, settings: {}, ctrls: [] };
+        
         this.gui = gui;
+        this.updatePathNamesGUI();
 
         window.addEventListener( 'resize', this.resize.bind(this) );
 
@@ -94,14 +108,22 @@ class App{
             this.activeNode = this.selectNode( pt.x, pt.y );
             if ( this.activeNode == null){
                 this.activeCtrl = this.selectCtrl( pt.x, pt.y );
-                if (this.activeCtrl == null) this.addNode( this.config.tool, evt.x, evt.y );
-                if (this.activeCtrl.type == 'clockwise'){
+                if (this.activeCtrl == null){
+                    pt.x = evt.x;
+                    pt.y = evt.y;
+                    this.addNode( this.config.tool, pt.x, pt.y );
+                }else if (this.activeCtrl.type == 'clockwise'){
                     //Just flip the direction
                     this.activeCtrl.node.options.clockwise = !this.activeCtrl.node.options.clockwise;
                     this.activeCtrl = null;
                 }
             }
             this.render();
+            if (this.tipActive){
+                this.tipActive = false;
+            }else{
+                this.showTip();
+            }
         }, false);
 
         canvas.addEventListener( 'pointermove', ( evt ) => {
@@ -131,6 +153,7 @@ class App{
                     }
                     this.render();
                 }if (this.activeNode){
+                    if (this.config.snap) this.graph.snapToGrid(pt);
                     this.activeNode.x = pt.x;
                     this.activeNode.y = pt.y;
                     this.render();
@@ -152,6 +175,83 @@ class App{
         this.preview = new Preview();
 
         this.resize();
+    }
+
+    showTip(){
+        const tipsShown = this.store.tipsShown;
+        let count = 0;
+        tipsShown.forEach( tip => {
+            if ( tip ) count++ 
+        } );
+        if (count == tipsShown.length) return;
+
+        const tips = [
+            "Select a tool",
+            "When editing a curve the green dots are the control points",
+            "When editing an arc, orange is the radius, green the start angle and red the end angle. The grey triangle lets you flip the direction.",
+            "Use Backdrop Ghosts to display a Path(s) while editing another.",
+            "Snap makes positioning snap to the grid",
+            "Backdrop 'Use Ghosts as holes' will convert the dotted line paths into holes when using the 'show' or 'export' buttons."
+        ]
+
+        let index;
+
+        if ( this.config.tool == 'select' && !tipsShown[0]){
+            index = 0;
+        }else if ( this.config.tool.includes( 'CurveTo') && !tipsShown[1]){
+            index = 1;
+        }else if (this.config.tool == 'arc' && !tipsShown[2]){
+            index = 2;
+        }else{
+            index = 3;
+            while(index < tips.length){
+                if (!tipsShown[index]) break;
+                index++;
+            }
+            if (index >= tips.length) return;
+        }
+
+        alert( tips[index] );
+        this.store.tipShown = index;
+        this.tipActive = true;
+    }
+
+    updatePathNamesGUI(){
+        //this.ghosts = { folder: backdrop, settings: {}, ctrls: {} };
+        const pathNames = this.store.getPathNames();
+
+        //Remove settings and ctrls that are no longer in the pathNames array
+        for( const [ key, value ] of Object.entries(this.ghosts.settings) ){
+            const index = pathNames.indexOf( key );
+            if (index == -1){
+                delete this.ghosts.settings[ key ];
+                this.ghosts.ctrls[ key ].destroy();
+                delete this.ghosts.ctrls[ key ];
+            }
+        }
+
+        //Add new settings and ctrls
+        pathNames.forEach( name => {
+            if ( this.ghosts.settings[name] == undefined ){
+                this.ghosts.settings[name] = false;
+                const ctrl = this.ghosts.folder.add( this.ghosts.settings, name ).onChange( value => {
+                    if ( value ){
+                        try{
+                            const path = this.store.read( name ).nodes;
+                            this.ghosts.paths[name] = path;
+                        }catch(e){
+                            console.warn( e.message );
+                        }
+                    }else{
+                        delete this.ghosts.paths[name];
+                    } 
+                
+                    this.render();
+
+                } );
+                this.ghosts.ctrls[name] = ctrl;
+            }
+        });
     }
 
     loadPath( name ){
@@ -179,43 +279,81 @@ class App{
         });
 
         if ( names.length > 0) this.loadPath( names[0] );
+        this.updatePathNamesGUI();
     }
 
     export(){
-        let unitScalar;
+        let unitScalar, precision;
         switch ( this.config.units ){
             case 'm':
                 unitScalar = 1;
+                precision = 3;
                 break;
             case 'cm':
                 unitScalar = 0.01;
+                precision = 5;
                 break;
             case 'mm':
                 unitScalar = 0.001;
+                precision = 6;
                 break;
         }
         let str = "const shape = new THREE.Shape();\n";
+
         this.nodes.forEach( node => {
             switch( node.tool ){
                 case "moveTo":
-                    str = `${str}shape.moveTo( ${node.x * unitScalar}, ${-node.y * unitScalar });\n`;
+                    str = `${str}shape.moveTo( ${(node.x * unitScalar).toFixed( precision )} , ${(-node.y * unitScalar).toFixed( precision ) });\n`;
                     break;
                 case "lineTo":
-                    str = `${str}shape.lineTo( ${node.x * unitScalar}, ${-node.y * unitScalar });\n`;
+                    str = `${str}shape.lineTo( ${(node.x * unitScalar).toFixed( precision )}, ${(-node.y * unitScalar).toFixed( precision ) });\n`;
                     break;
                 case "quadraticCurveTo":
-                    str = `${str}shape.quadraticCurveTo( ${node.options.ctrlA.x * unitScalar}, ${-node.options.ctrlA.y * unitScalar}, ${node.x}, ${-node.y });\n`;
+                    str = `${str}shape.quadraticCurveTo( ${(node.options.ctrlA.x * unitScalar).toFixed( precision )}, ${(-node.options.ctrlA.y * unitScalar).toFixed( precision )}, ${(node.x * unitScalar).toFixed( precision )}, ${(-node.y * unitScalar).toFixed( precision ) };\n`;
                     break;
                 case "bezierCurveTo":
-                    str = `${str}shape.bezierCurveTo( ${node.options.ctrlA.x * unitScalar}, ${-node.options.ctrlA.y * unitScalar}, ${node.options.ctrlB.x * unitScalar}, ${-node.options.ctrlB.y * unitScalar}, ${node.x}, ${-node.y });\n`;
+                    str = `${str}shape.bezierCurveTo( ${(node.options.ctrlA.x * unitScalar).toFixed( precision )}, ${(-node.options.ctrlA.y * unitScalar).toFixed( precision )}, ${(node.options.ctrlB.x * unitScalar).toFixed( precision )}, ${(-node.options.ctrlB.y * unitScalar).toFixed( precision )}, ${(node.x * unitScalar).toFixed( precision )}, ${(-node.y * unitScalar).toFixed( precision ) });\n`;
                     break;
                 case 'arc':
-                    str = `${str}shape.absarc( ${node.x * unitScalar}, ${-node.y * unitScalar}, ${node.options.radius* unitScalar}, ${-node.options.start}, ${-node.options.end}, ${(node.options.clockwise) ? 'true' : 'false'} );\n`;
+                    str = `${str}shape.absarc( ${(node.x * unitScalar).toFixed( precision )}, ${(-node.y * unitScalar).toFixed( precision )}, ${(node.options.radius * unitScalar).toFixed( precision )}, ${-node.options.start.toFixed( 3 )}, ${-node.options.end.toFixed( 3 )}, ${(node.options.clockwise) ? 'true' : 'false'} );\n`;
                     const pt = Geometry.calcPointOnCircle( node.x, node.y, node.options.radius, node.options.end );
-                    str = `${str}shape.moveTo( ${pt.x* unitScalar}, ${-pt.y * unitScalar} );\n`;
+                    str = `${str}shape.moveTo( ${(pt.x* unitScalar).toFixed( precision )}, ${(-pt.y * unitScalar).toFixed( precision )} );\n`;
                     break;
             }
         })
+
+        if (this.config.holes){
+            let index = 1;
+
+            for( const [key, nodes] of Object.entries( this.ghosts.paths)){
+                const path = `path${index++}`;
+                str = `${str}const ${path} = new THREE.Path()\n`;
+
+                nodes.forEach( node => {
+                    switch( node.tool ){
+                        case "moveTo":
+                            str = `${str}${path}.moveTo( ${(node.x * unitScalar).toFixed( precision )} , ${(-node.y * unitScalar).toFixed( precision ) });\n`;
+                            break;
+                        case "lineTo":
+                            str = `${str}${path}.lineTo( ${(node.x * unitScalar).toFixed( precision )}, ${(-node.y * unitScalar).toFixed( precision ) });\n`;
+                            break;
+                        case "quadraticCurveTo":
+                            str = `${str}${path}.quadraticCurveTo( ${(node.options.ctrlA.x * unitScalar).toFixed( precision )}, ${(-node.options.ctrlA.y * unitScalar).toFixed( precision )}, ${(node.x * unitScalar).toFixed( precision )}, ${(-node.y * unitScalar).toFixed( precision ) });\n`;
+                            break;
+                        case "bezierCurveTo":
+                            str = `${str}${path}.bezierCurveTo( ${(node.options.ctrlA.x * unitScalar).toFixed( precision )}, ${(-node.options.ctrlA.y * unitScalar).toFixed( precision )}, ${(node.options.ctrlB.x * unitScalar).toFixed( precision )}, ${(-node.options.ctrlB.y * unitScalar).toFixed( precision )}, ${(node.x * unitScalar).toFixed( precision )}, ${(-node.y * unitScalar).toFixed( precision ) });\n`;
+                            break;
+                        case 'arc':
+                            str = `${str}${path}.absarc( ${(node.x * unitScalar).toFixed( precision )}, ${(-node.y * unitScalar).toFixed( precision )}, ${(node.options.radius * unitScalar).toFixed( precision )}, ${-node.options.start.toFixed( 3 )}, ${-node.options.end.toFixed( 3 )}, ${(node.options.clockwise) ? 'true' : 'false'} );\n`;
+                            const pt = Geometry.calcPointOnCircle( node.x, node.y, node.options.radius, node.options.end );
+                            str = `${str}${path}.moveTo( ${(pt.x* unitScalar).toFixed( precision )}, ${(-pt.y * unitScalar).toFixed( precision )} );\n`;
+                            break;
+                    }
+                });
+
+                str = `${str}shape.holes.push(${path});\n`;
+            }
+        }
 
         navigator.clipboard.writeText(str);
 
@@ -309,14 +447,13 @@ class App{
             this.loadPath( value );
         });
         
-        this.config.yAxis = 0.1;
-        this.config.xAxis = 0.1;
-        this.config.xMax = 5;
-        this.config.scale = 50;
-        this.config.snap = true;
+        this.config.yAxis = 0.5;
+        this.config.xAxis = 0.5;
+        this.config.xMax = 2;
+        this.config.snap = false;
         this.config.name = name;
         this.config.tool = 'select';
-        this.config.depth = 0.5;
+        this.config.depth = 0.2;
         
         this.gui.controllers.forEach( controller => controller.updateDisplay() );
         //this.nameCtrl.updateDisplay();
@@ -327,6 +464,7 @@ class App{
         this.activePath = name;
 
         this.render(true);
+        this.updatePathNamesGUI();
     }
 
     copyPath(){
@@ -339,6 +477,7 @@ class App{
             this.loadPath( value );
         });
         this.nameCtrl.updateDisplay();
+        this.updatePathNamesGUI();
     }
 
     savePath(){
@@ -417,6 +556,7 @@ class App{
 
     addNode( tool, x, y, insertIndex = -1 ){
         let pt = this.graph.convertScreenToPath( x, y );
+        if (this.config.snap) this.graph.snapToGrid( pt );
         const node = { tool, x: pt.x, y: pt.y };
         this.activeNode = node;
         if (insertIndex != -1){
@@ -454,7 +594,7 @@ class App{
     }
 
     render(save = false){
-        this.graph.render( this.nodes, this.activeNode, this.activeCtrl );
+        this.graph.render( this.nodes, this.activeNode, this.activeCtrl, this.ghosts.paths );
 
         if (save) this.store.write( this.config, this.nodes );
     }

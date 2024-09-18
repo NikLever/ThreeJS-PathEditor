@@ -9,13 +9,15 @@ Your path is saved to localStorage with the name from the gui.
 
 ### Tutorial
 
-Select the moveTo tool. 
-Click to place the first point.
-Select the lineTo tool
-Click to add lines
-Right click to delete a node
-Right click over a line to insert a node
-Right click to change the tool to the active node. 
+- Select the moveTo tool. 
+- Click to place the first point.
+- Select the lineTo tool.
+- Click to add lines.
+- Right click to delete a node
+- Right click over a line to insert a node
+- Right click to change the tool to the active node. 
+- The green nodes allow you to edit the control point for a curve.
+- For an arc, orange adjusts the radius, green the start angle and red the end angle. The grey triangle when clicked flips the arc direction.
 
 Click a blue node to select.
 The current active line will be displayed in black.
@@ -27,14 +29,19 @@ The current active line will be displayed in black.
 - **units** setting cm will scale the export value by 0.01, mm will scale by 0.001
 - **extrudeDepth** the depth value used when displaying the 3d view of the extruded path
 - **tool** the tool used when creating a new node or changing an existing node
+- **snap** If checked then placement will snap to the grid.
 
 ### Commands
 - **new** creates a new empty path. 
 - **copy** creates a copy of the current path and switches to the copy
+- **udo** Udo upto 6 times.
 - **delete** deletes the current path
 - **show** displays a ThreeJS 3D view of the extruded path
 - **export** converts the path to ThreeJS code and copies this to the clipboard for copying into your project
 **name** select a different path
+
+### Backdrop
+The backdrop folder can be used to view an existing path(s) while editing another. Just set the Ghosts > PathX as checked. If 'Use ghosts as holes' is checked then the ghosts will appear as holes in the 3D object when ***show*** is clicked. The code to add holes will also be added when using ***export*** 
 
 ### Tools
 - **moveTo**

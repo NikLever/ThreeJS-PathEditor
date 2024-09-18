@@ -2,6 +2,7 @@ import { ExtrudeGeometry,
          MeshStandardMaterial,
          Mesh,
          Shape,
+         Path,
          Scene,
          Color,
          DirectionalLight,
@@ -33,8 +34,15 @@ export class Preview{
         this.on = false;
     }
 
-    show( nodes, depth ){
+    show( nodes, depth, holes ){
         const shape = this.nodesToShape( nodes );
+
+        if (holes){
+            for( const [key, nodes] of Object.entries(holes)){
+                const path = this.nodesToPath( nodes );
+                shape.holes.push( path );
+            }
+        }
 
         if ( this.mesh ){
             this.mesh.geometry.dispose();
@@ -129,6 +137,34 @@ export class Preview{
         });
 
         return shape;
+    }
+
+    nodesToPath( nodes ){
+        const path = new Path();
+
+        nodes.forEach( node => {
+            switch( node.tool ){
+                case 'moveTo':
+                    path.moveTo( node.x, -node.y );
+                    break;
+                case 'lineTo':
+                    path.lineTo( node.x, -node.y );
+                    break;
+                case 'quadraticCurveTo':
+                    path.quadraticCurveTo( node.options.ctrlA.x, -node.options.ctrlA.y, node.x, -node.y );
+                    break;
+                case 'bezierCurveTo':
+                    path.bezierCurveTo( node.options.ctrlA.x, -node.options.ctrlA.y, node.options.ctrlB.x, -node.options.ctrlB.y, node.x, -node.y );
+                    break;
+                case 'arc':
+                    path.absarc( node.x, -node.y, node.options.radius, -node.options.start, -node.options.end, !node.options.clockwise );
+                    const pt = Geometry.calcPointOnCircle( node.x, node.y, node.options.radius, node.options.end );
+                    path.moveTo( pt.x, -pt.y );
+                    break;
+            }
+        });
+
+        return path;
     }
 
     render(){

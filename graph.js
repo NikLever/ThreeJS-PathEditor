@@ -279,10 +279,60 @@ export class Graph{
         this.prevPt = pt;
     }
 
+    drawGhosts( ghosts ){
+        this.context.strokeStyle = "#333";
+        this.context.setLineDash([5, 10]);
+                            
+        this.context.beginPath();
+
+        let pt, ptA, ptB, radius;
+
+        for( const [key, nodes] of Object.entries( ghosts )){
+            try{
+                nodes.forEach( node => {
+                    pt = this.convertPathToScreen( node.x, node.y );
+                    switch( node.tool ){
+                        case 'moveTo':
+                            this.context.moveTo( pt.x, pt.y );
+                            break;
+                        case 'lineTo':
+                            this.context.lineTo( pt.x, pt.y );
+                            break;
+                        case 'quadraticCurveTo':
+                            ptA = this.convertPathToScreen( node.options.ctrlA.x, node.options.ctrlA.y );
+                            this.context.quadraticCurveTo( ptA.x, ptA.y, pt.x, pt.y );
+                            break;
+                        case 'bezierCurveTo':
+                            ptA = this.convertPathToScreen( node.options.ctrlA.x, node.options.ctrlA.y );
+                            ptB = this.convertPathToScreen( node.options.ctrlB.x, node.options.ctrlB.y );
+                            this.context.bezierCurveTo( ptA.x, ptA.y, ptB.x, ptB.y, pt.x, pt.y );
+                            break;
+                        case 'arc':
+                            radius = this.scalePathValueToScreen( node.options.radius );
+                            this.context.arc( pt.x, pt.y, radius, node.options.start, node.options.end, node.options.clockwise );
+                            break;
+                    }
+                });
+            }catch(e){
+                console.warn( e.message );
+            }
+        }
+
+        this.context.stroke();
+
+        this.context.setLineDash([]);
+    }
+
     isValueCtrlActive( type ){
         if (this.activeCtrl == null ) return false;
         if (this.activeCtrl.node == null ) return false;
         return this.activeCtrl.type == type;
+    }
+
+    snapToGrid( pt ){
+        pt.x = Math.round(pt.x * 10) / 10;
+        pt.y = Math.round(pt.y * 10) / 10;
+        //return { x, y };
     }
 
     convertScreenToPath( x, y ){
@@ -305,10 +355,12 @@ export class Graph{
         return value * scale;
     }
 
-    render( nodes, activeNode, activeCtrl ){
+    render( nodes, activeNode, activeCtrl, ghosts ){
         this.context.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
         this.drawBg();
         nodes.forEach( node => this.drawNode( node, activeNode, activeCtrl ) );
+
+        if ( ghosts ) this.drawGhosts( ghosts );
     }
 }

@@ -48,7 +48,7 @@ export class Store{
         if (serializedData==null) return ['Path1'];
         const data = JSON.parse(serializedData);
         for (const [key, value] of Object.entries(data)) {
-            if (key != 'activePath') names.push( key );
+            if (key != 'activePath' && key != 'tips') names.push( key );
         }
         return names;
     }
@@ -83,6 +83,20 @@ export class Store{
         const serializedData = localStorage.getItem( Store.namespace );
         const data = serializedData ? JSON.parse(serializedData) : {};
         data['activePath'] = value;
+        localStorage.setItem(Store.namespace, JSON.stringify(data));
+    }
+
+    get tipsShown(){
+        let tips = this.read( 'tips' );
+        if (tips == undefined) tips = [ false, false, false, false, false, false ];
+        return tips;
+    }
+
+    set tipShown( index ){
+        const serializedData = localStorage.getItem( Store.namespace );
+        const data = serializedData ? JSON.parse(serializedData) : {};
+        if (data['tips']==undefined) data['tips'] = [ false, false, false, false, false, false ];
+        data['tips'][index] = true;
         localStorage.setItem(Store.namespace, JSON.stringify(data));
     }
 }
